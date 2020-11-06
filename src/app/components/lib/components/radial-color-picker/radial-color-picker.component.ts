@@ -282,9 +282,9 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
             })
           ))
         ).subscribe((moveEvent: MouseEvent) => {
-          const elementRect = element.getBoundingClientRect();
-          const point = createPoint(moveEvent, elementRect);
-          this.applyRotation(point);
+          const mouseMoveElementRect = element.getBoundingClientRect();
+          const mouseMovePoint = createPoint(moveEvent, mouseMoveElementRect);
+          this.applyRotation(mouseMovePoint);
         });
       });
 
