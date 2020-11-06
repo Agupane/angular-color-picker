@@ -23,17 +23,18 @@ export const calculateQuadrant = (point: { x: number, y: number }): string => {
 
 
 /**
-    * Calculates the distance between two points.
-    *
-    * This variant expects separate x/y values for each point. If you already have
-    * the points as array or object use the corresponding methods.
-    *
-    * @param x1 The X value of the first point.
-    * @param y1 The Y value of the first point.
-    * @param x2 The X value of the second point.
-    * @param y2 The Y value of the second point.
-    * @return The distance between the two points.
-    */
+ *
+ * Calculates the distance between two points.
+ *
+ * This variant expects separate x/y values for each point. If you already have
+ * the points as array or object use the corresponding methods.
+ *
+ * @param x1 The X value of the first point.
+ * @param y1 y1 The Y value of the first point.
+ * @param x2 x2 The X value of the second point.
+ * @param y2 y2 The Y value of the second point.
+ * @return The distance between the two points.
+ */
 export const distanceOfSegmentByXYValues = (x1: number, y1: number, x2: number, y2: number): number => {
   return Math.sqrt(((x1 - x2) * (x1 - x2)) + ((y1 - y2) * (y1 - y2)));
 };
@@ -86,20 +87,20 @@ export const determineCSSRotationAngle = (point) => {
 /**
  * Quadrant I and IV => opacity knob (right semicircle)
  * Quadrant II and III => color knob (left semicircle)
- * @param point
+ * @param point => x,y of the mouse point
  */
 export const isRightSemicircleSelected = (point) => {
   const quadrant = calculateQuadrant(point);
-  return quadrant === Quadrant.I || quadrant === Quadrant.IV
+  return quadrant === Quadrant.I || quadrant === Quadrant.IV;
 };
 
 const _normalizeX = (coordX, elementRect) => {
   return coordX - elementRect.left - elementRect.width / 2;
-}
+};
 
 const _normalizeY = (coordY, elementRect) => {
   return ((coordY - elementRect.top) * -1) + elementRect.height / 2;
-}
+};
 
 export const createPoint = (mouseEvent, elementRect): {x: number, y: number} => {
   let point;
@@ -115,4 +116,19 @@ export const createPoint = (mouseEvent, elementRect): {x: number, y: number} => 
     };
   }
   return point;
-}
+};
+
+
+export const canRotateOpacity = (point, offsetX = 20) => {
+  const isOpacitySemiCircleSelected = isRightSemicircleSelected(point);
+  const isOpacitySemiCircleStillSelectedForOffset = isRightSemicircleSelected({ ...point, x: point.x - offsetX});
+
+  return isOpacitySemiCircleSelected && isOpacitySemiCircleStillSelectedForOffset;
+};
+
+export const canRotateColor = (point, offsetX = 20) => {
+  const isColorSemicircleSelected = !isRightSemicircleSelected(point);
+  const isColorSemiCircleStillSelectedForOffset = !isRightSemicircleSelected({ ...point, x: point.x + offsetX});
+
+  return isColorSemicircleSelected && isColorSemiCircleStillSelectedForOffset;
+};
