@@ -32,6 +32,8 @@ import {
   isRightSemicircleSelected, throttleFunction
 } from '../../helpers/helpers';
 
+import chroma from 'chroma-js';
+
 export const RADIAL_COLOR_PICKER_VALUE_ACCESSOR: any = {
   provide: NG_VALUE_ACCESSOR,
   useExisting: forwardRef(() => RadialColorPickerComponent),
@@ -82,7 +84,7 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   public mouseUpEv: string;
 
   // @todo (agustin) change to currentHsl color to rgb
-  private _value = 'FF0000';
+  private _value = '7f00ff';
   private defaultSize = 300;
   private gradientPlayer: AnimationPlayer;
   private knobPlayer: AnimationPlayer;
@@ -157,7 +159,7 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
         this.hueValue = hsl.hue;
       } else if (val.includes('hsl')) {
         const color = extractHSL(val);
-        this._value = hslToHex(color.h, 100, 50);
+        this._value = chroma(color.h, 1, 0.5, 'hsl').hex();
         this.hueValue = color.h;
       }
     }
@@ -417,7 +419,7 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
    * @param colorRotation goes from 0 (bottom) to 360
    */
   public onRotateColor(rotationAngle, colorRotation) {
-    const hex = hslToHex(colorRotation, 100, 50);
+    const hex = chroma(colorRotation, 1, 0.5, 'hsl').hex();
     this.colorRotation = colorRotation;
     this.value = hex;
 
@@ -426,6 +428,7 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
 
     const colorKnobNativeElement = this.colorRotator.nativeElement;
     this.renderer.setStyle(colorKnobNativeElement, 'transform', `rotate(${rotationAngle}deg)`);
+    this.colorChange.emit(`#${hex}`);
     if (!this.isExplicit) {
       this.colorChange.emit(`#${hex}`);
     }
@@ -436,9 +439,8 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
    * @param opacityRotation goes from 360 to 180 (starts from the bottom opposite to the color
    */
   public onRotateOpacity(opacityRotation) {
-    // This percent goes from 0 to 100 but we need to convert it from 0 to 50
-    const lightnessPercent = Math.abs((opacityRotation - 360) * 100 / 360);
-    const hex = hslToHex(this.colorRotation, 100, lightnessPercent);
+    const lightnessPercent = Math.abs((opacityRotation - 360) * 100 / 180);
+    const hex = chroma(this.colorRotation, 1, lightnessPercent / 100, 'hsl').hex();
     this.value = hex;
 
     const opacityKnobNativeElement = this.opacityRotator.nativeElement;
