@@ -132,3 +132,19 @@ export const canRotateColor = (point, offsetX = 20) => {
 
   return isColorSemicircleSelected && isColorSemiCircleStillSelectedForOffset;
 };
+
+let timerId = null;
+export const throttleFunction  = (func: () => void, delay: number = 100) => {
+  // If setTimeout is already scheduled, no need to do anything
+  if (timerId) {
+    return;
+  }
+
+  // Schedule a setTimeout after delay seconds
+  timerId  =  setTimeout(() => {
+    func();
+    // Once setTimeout function execution is finished, timerId = undefined so that in <br>
+    // the next scroll event function execution can be scheduled by the setTimeout
+    timerId  =  undefined;
+  }, delay);
+};

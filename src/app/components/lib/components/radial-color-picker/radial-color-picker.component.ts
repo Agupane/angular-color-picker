@@ -29,7 +29,7 @@ import {
   canRotateOpacity,
   createPoint,
   determineCSSRotationAngle,
-  isRightSemicircleSelected
+  isRightSemicircleSelected, throttleFunction
 } from '../../helpers/helpers';
 
 export const RADIAL_COLOR_PICKER_VALUE_ACCESSOR: any = {
@@ -417,13 +417,12 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
    * @param colorRotation goes from 0 (bottom) to 360
    */
   public onRotateColor(rotationAngle, colorRotation) {
- //   console.log("onRotateColor", colorRotation)
     const hex = hslToHex(colorRotation, 100, 50);
     this.colorRotation = colorRotation;
     this.value = hex;
 
     const mapRadius = this.getSize;
-    renderColorMap(this.canvas.nativeElement, mapRadius, this.colorRotation, this.coefficient);
+    throttleFunction(() => renderColorMap(this.canvas.nativeElement, mapRadius, this.colorRotation, this.coefficient));
 
     const colorKnobNativeElement = this.colorRotator.nativeElement;
     this.renderer.setStyle(colorKnobNativeElement, 'transform', `rotate(${rotationAngle}deg)`);
@@ -437,7 +436,6 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
    * @param opacityRotation goes from 360 to 180 (starts from the bottom opposite to the color
    */
   public onRotateOpacity(opacityRotation) {
-   // console.log("onRotate opacity", opacityRotation)
     // This percent goes from 0 to 100 but we need to convert it from 0 to 50
     const lightnessPercent = Math.abs((opacityRotation - 360) * 100 / 360);
     const hex = hslToHex(this.colorRotation, 100, lightnessPercent);
