@@ -1,2 +1,9 @@
 <app-radial-color-picker (lifecycle)="rtpHook($event)" (colorChange)="colorChange($event)" (selected)="selectColor($event)" selectToChange="true">
 </app-radial-color-picker>
+
+<p>
+  Selected color:
+  <span [style.background-color]="selectedColor">
+     {{selectedColor}}
+  </span>
+</p>
