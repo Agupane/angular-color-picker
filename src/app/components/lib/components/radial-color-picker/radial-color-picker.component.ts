@@ -112,7 +112,6 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   @ViewChild('knob', { static: false, read: ElementRef }) public knob: ElementRef;
   @ViewChild('opacityKnob', { static: false, read: ElementRef }) public opacityKnob: ElementRef;
 
-  // @todo (agustin) check
   @ViewChild('colorRotator', { static: false, read: ElementRef }) public colorRotator: ElementRef;
   @ViewChild('opacityRotator', { static: false, read: ElementRef }) public opacityRotator: ElementRef;
 
@@ -395,6 +394,7 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
     this.lifecycle.emit(RCPLifecycleEvents.hide);
     this.knobState = false;
     this.createPlayerForKnob();
+    this.createPlayerForKnobGradient();
     this.knobPlayer.onDone(() => {
       this.gradientState = false;
       this.createPlayerForGradient();
@@ -473,6 +473,7 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   }
 
   public confirmColor($event) {
+    console.log('confirmed');
     if (!this.isCollapsible) {
       this.selected.emit($event.color);
       this.lifecycle.emit(RCPLifecycleEvents.selected);
@@ -566,6 +567,12 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
     }
     if (this.gradientPlayer) {
       this.gradientPlayer.destroy();
+    }
+    if (this.opacityGradientPlayer) {
+      this.opacityGradientPlayer.destroy();
+    }
+    if (this.opacityKnobPlayer) {
+      this.opacityKnobPlayer.destroy();
     }
   }
 }
