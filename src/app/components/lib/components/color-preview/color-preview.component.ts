@@ -48,19 +48,14 @@ export class ColorPreviewComponent implements OnInit, OnChanges, AfterViewInit, 
       }
     };
 
-
   }
 
   constructor(
     private sanitizer: DomSanitizer,
     private el: ElementRef
-  ) {
-
-
-  }
+  ) {}
 
   ngOnInit() {
-
   }
 
   ngAfterViewInit() {
