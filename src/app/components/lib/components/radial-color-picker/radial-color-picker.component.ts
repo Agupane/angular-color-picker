@@ -19,16 +19,20 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { AnimationsMeta } from '../../helpers/animations';
-import { hexToRgb, hslToHex, rgbToHsl, extractRGB, rgbToHex, extractHSL } from '../../helpers/color-functions';
+import { hexToRgb, rgbToHsl, extractRGB, rgbToHex, extractHSL } from '../../helpers/color-functions';
 import { renderColorMap } from '../../helpers/color-gradient';
-import {fromEvent, merge, Observable, Subscription} from "rxjs";
-import {Platform} from "@angular/cdk/platform";
-import {filter, takeUntil, tap} from "rxjs/operators";
+import { fromEvent, merge, Observable, Subscription } from 'rxjs';
+import { Platform } from '@angular/cdk/platform';
+import { filter, takeUntil, tap } from 'rxjs/operators';
 import {
+  canRotateColor,
+  canRotateOpacity,
   createPoint,
   determineCSSRotationAngle,
-  isRightSemicircleSelected
-} from "../../helpers/helpers";
+  isRightSemicircleSelected, throttleFunction
+} from '../../helpers/helpers';
+
+import chroma from 'chroma-js';
 
 export const RADIAL_COLOR_PICKER_VALUE_ACCESSOR: any = {
   provide: NG_VALUE_ACCESSOR,
@@ -53,6 +57,7 @@ enum RCPLifecycleEvents {
 })
 export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy, ControlValueAccessor {
   public coefficient = 0.77;
+  public SEPARATION_BETWEEN_CIRCLES = 20;
   public hueValue = 266;
   public disabled = false;
   public active = false;
@@ -79,14 +84,15 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   public mouseUpEv: string;
 
   // @todo (agustin) change to currentHsl color to rgb
-  private _value = 'FF0000';
+  private _value = '7f00ff';
   private defaultSize = 300;
   private gradientPlayer: AnimationPlayer;
   private knobPlayer: AnimationPlayer;
   private opacityGradientPlayer: AnimationPlayer;
   private opacityKnobPlayer: AnimationPlayer;
 
-  private colorRotation: number = 0;
+  private colorRotation = 180;
+  private opacityRotation = 270;
 
   @Input() public color: string;
   @Input() public colorType = 'hex';
@@ -106,9 +112,8 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   @ViewChild('knob', { static: false, read: ElementRef }) public knob: ElementRef;
   @ViewChild('opacityKnob', { static: false, read: ElementRef }) public opacityKnob: ElementRef;
 
-  // @todo (agustin) check
-/*  @ViewChild('colorRotator', { static: false, read: ElementRef }) public colorRotator: ElementRef;
-  @ViewChild('opacityRotator', { static: false, read: ElementRef }) public opacityRotator: ElementRef;*/
+  @ViewChild('colorRotator', { static: false, read: ElementRef }) public colorRotator: ElementRef;
+  @ViewChild('opacityRotator', { static: false, read: ElementRef }) public opacityRotator: ElementRef;
 
 
 
@@ -154,7 +159,7 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
         this.hueValue = hsl.hue;
       } else if (val.includes('hsl')) {
         const color = extractHSL(val);
-        this._value = hslToHex(color.h, 100, 50);
+        this._value = chroma(color.h, 1, 0.5, 'hsl').hex();
         this.hueValue = color.h;
       }
     }
@@ -165,7 +170,9 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   }
 
   get value() {
-    return '#' + this._value;
+    const lightnessPercent = Math.abs((this.opacityRotation - 360) * 100 / 180);
+    const hex = chroma(this.colorRotation, 1, lightnessPercent / 100, 'hsl').hex();
+    return hex;
   }
 
   @HostBinding('style.width.px') get width() {
@@ -203,7 +210,6 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   }
 
   writeValue(obj: any): void {
-    // console.log(obj);
     this.value = obj;
   }
 
@@ -242,21 +248,19 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
     const rgb = hexToRgb(this._value);
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
     this.hueValue = hsl.hue;
-    this.configureEventListeners()
   }
 
   configureEventListeners() {
-    // @todo (agustin) try to replace with up element
-    const opacityKnobNativeElement = this.el.nativeElement.querySelector('#opacityRotator')
+    const opacityKnobNativeElement = this.opacityRotator?.nativeElement;
     this.mouseUp$ = fromEvent(opacityKnobNativeElement, this.mouseUpEv, { passive: true });
     this.mouseOut$ = fromEvent(opacityKnobNativeElement, this.cancelEv, { passive: true });
 
-    this.configureRotationListenersForElement(opacityKnobNativeElement)
+    this.configureRotationListenersForElement(opacityKnobNativeElement);
   }
 
   configureRotationListenersForElement(element) {
   //  requestAnimationFrame(this.initialRender.bind(this));
-    this.mouseUp$ = fromEvent(element, this.mouseUpEv, { passive: true })
+    this.mouseUp$ = fromEvent(element, this.mouseUpEv, { passive: true });
     this.mouseOut$ = fromEvent(element, this.cancelEv, { passive: true });
 
     this.mouseDownSub = fromEvent(element, this.mouseDownEv, { passive: true })
@@ -279,25 +283,28 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
             })
           ))
         ).subscribe((moveEvent: MouseEvent) => {
-          const elementRect = element.getBoundingClientRect()
-          const point = createPoint(moveEvent, elementRect);
-          this.applyRotation(point);
+          const mouseMoveElementRect = element.getBoundingClientRect();
+          const mouseMovePoint = createPoint(moveEvent, mouseMoveElementRect);
+          this.applyRotation(mouseMovePoint);
         });
       });
 
     this.mouseUp$.subscribe((upEvent) => {
-      this.dragging = false
+      this.dragging = false;
     });
   }
 
-  applyRotation (point) {
+  applyRotation(point) {
     const { rotation, colorAngle } = determineCSSRotationAngle(point);
-    const isOpacitySemiCircleSelected = isRightSemicircleSelected(point)
+    const isOpacityRotationPossible = canRotateOpacity(point, this.SEPARATION_BETWEEN_CIRCLES);
+    const isColorRotationPossible = canRotateColor(point, this.SEPARATION_BETWEEN_CIRCLES);
 
-    if(this.draggingOpacity && isOpacitySemiCircleSelected) {
-      this.onRotateOpacity(rotation)
-    } else if(!this.draggingOpacity && !isOpacitySemiCircleSelected) {
-      this.onRotateColor(rotation, colorAngle)
+    if (this.draggingOpacity && isOpacityRotationPossible) {
+      this.onRotateOpacity(rotation);
+      return;
+    }
+    if (!this.draggingOpacity && isColorRotationPossible) {
+      this.onRotateColor(rotation, colorAngle);
     }
   }
 
@@ -312,11 +319,12 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   }
 
   ngAfterViewInit() {
+    this.configureEventListeners();
     this.recalculateKnobPosition();
     this.recalculateOpacityKnobPosition();
     this.rect = this.el.nativeElement.getBoundingClientRect();
     const mapRadius = this.getSize;
-    renderColorMap(this.canvas.nativeElement, mapRadius);
+    renderColorMap(this.canvas.nativeElement, mapRadius, this.colorRotation);
     if (this.isCollapsed) {
       this.introAnimation();
       this.introAnimationOpacity();
@@ -386,6 +394,7 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
     this.lifecycle.emit(RCPLifecycleEvents.hide);
     this.knobState = false;
     this.createPlayerForKnob();
+    this.createPlayerForKnobGradient();
     this.knobPlayer.onDone(() => {
       this.gradientState = false;
       this.createPlayerForGradient();
@@ -412,19 +421,16 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
    * @param colorRotation goes from 0 (bottom) to 360
    */
   public onRotateColor(rotationAngle, colorRotation) {
-    console.log("onRotateColor", colorRotation)
-    const hex = hslToHex(colorRotation, 100, 50);
-    this.colorRotation = colorRotation
+    const hex = chroma(colorRotation, 1, 0.5, 'hsl').hex();
+    this.colorRotation = colorRotation;
     this.value = hex;
 
     const mapRadius = this.getSize;
-    renderColorMap(this.canvas.nativeElement, mapRadius, this.colorRotation, this.coefficient);
+    throttleFunction(() => renderColorMap(this.canvas.nativeElement, mapRadius, this.colorRotation, this.coefficient));
 
-    const colorKnobNativeElement = this.el.nativeElement.querySelector('#colorRotator')
+    const colorKnobNativeElement = this.colorRotator.nativeElement;
     this.renderer.setStyle(colorKnobNativeElement, 'transform', `rotate(${rotationAngle}deg)`);
-    if (!this.isExplicit) {
-      this.colorChange.emit(`#${hex}`);
-    }
+    this.colorChange.emit(hex);
   }
 
   /**
@@ -432,17 +438,14 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
    * @param opacityRotation goes from 360 to 180 (starts from the bottom opposite to the color
    */
   public onRotateOpacity(opacityRotation) {
-    console.log("onRotate opacity", opacityRotation)
-    // This percent goes from 0 to 100 but we need to convert it from 0 to 50
-    const lightnessPercent = Math.abs((opacityRotation - 360) * 100 / 360)
-    const hex = hslToHex(this.colorRotation, 100, lightnessPercent);
+    const lightnessPercent = Math.abs((opacityRotation - 360) * 100 / 180);
+    const hex = chroma(this.colorRotation, 1, lightnessPercent / 100, 'hsl').hex();
+    this.opacityRotation = opacityRotation;
     this.value = hex;
 
-    const opacityKnobNativeElement = this.el.nativeElement.querySelector('#opacityRotator')
+    const opacityKnobNativeElement = this.opacityRotator.nativeElement;
     this.renderer.setStyle(opacityKnobNativeElement, 'transform', `rotate(${opacityRotation}deg)`);
-    if (!this.isExplicit) {
-      this.colorChange.emit(`#${hex}`);
-    }
+    this.colorChange.emit(hex);
   }
 
   public recalculateKnobPosition() {
@@ -470,7 +473,7 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   }
 
   public confirmColor($event) {
-    // console.log('confirm color', $event);
+    console.log('confirmed');
     if (!this.isCollapsible) {
       this.selected.emit($event.color);
       this.lifecycle.emit(RCPLifecycleEvents.selected);
@@ -565,7 +568,12 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
     if (this.gradientPlayer) {
       this.gradientPlayer.destroy();
     }
-    // console.log('color picker destroy');
+    if (this.opacityGradientPlayer) {
+      this.opacityGradientPlayer.destroy();
+    }
+    if (this.opacityKnobPlayer) {
+      this.opacityKnobPlayer.destroy();
+    }
   }
 }
 

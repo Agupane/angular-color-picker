@@ -48,27 +48,20 @@ export class ColorPreviewComponent implements OnInit, OnChanges, AfterViewInit, 
       }
     };
 
-
   }
 
   constructor(
     private sanitizer: DomSanitizer,
     private el: ElementRef
-  ) {
-
-
-  }
+  ) {}
 
   ngOnInit() {
-
   }
 
   ngAfterViewInit() {
-    // console.log(this.size);
     const rect = this.el.nativeElement.getBoundingClientRect();
     const innerCircle = this.size * this.coefficient;
     this.relation = innerCircle / rect.width;
-    // console.log('relation', relation);
   }
 
   ngOnChanges(changes) {
@@ -78,7 +71,6 @@ export class ColorPreviewComponent implements OnInit, OnChanges, AfterViewInit, 
   }
 
   public rippleAnimationDone($event) {
-    // console.log($event);
     if ($event.toState) {
       this.rippleState = false;
       this.confirm.emit({
@@ -88,13 +80,11 @@ export class ColorPreviewComponent implements OnInit, OnChanges, AfterViewInit, 
   }
 
   public buttonAnimationDone($event) {
-    // console.log($event);
     if ($event.toState) {
       this.buttonState = false;
     }
   }
 
   ngOnDestroy() {
-    // console.log('color preview destroy');
   }
 }
