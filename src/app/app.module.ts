@@ -4,8 +4,6 @@ import { NgModule } from '@angular/core';
 import { AppComponent } from './app.component';
 
 import { SimpleComponent } from './components/simple/simple.component';
-import { FormcontrolComponent } from './components/formcontrol/formcontrol.component';
-import { CollapsibleComponent } from './components/collapsible/collapsible.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,8 +19,6 @@ import { RadialColorPickerModule } from './components/lib/radial-color-picker.mo
   declarations: [
     AppComponent,
     SimpleComponent,
-    FormcontrolComponent,
-    CollapsibleComponent,
   ],
   imports: [
     BrowserModule,
