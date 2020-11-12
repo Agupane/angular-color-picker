@@ -19,11 +19,11 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { AnimationsMeta } from '../../helpers/animations';
-import { hexToRgb, hslToHex, rgbToHsl, extractRGB, rgbToHex, extractHSL } from '../../helpers/color-functions';
+import { hexToRgb, rgbToHsl, extractRGB, rgbToHex, extractHSL } from '../../helpers/color-functions';
 import { renderColorMap } from '../../helpers/color-gradient';
-import {fromEvent, merge, Observable, Subscription} from 'rxjs';
-import {Platform} from '@angular/cdk/platform';
-import {filter, takeUntil, tap} from 'rxjs/operators';
+import { fromEvent, merge, Observable, Subscription } from 'rxjs';
+import { Platform } from '@angular/cdk/platform';
+import { filter, takeUntil, tap } from 'rxjs/operators';
 import {
   canRotateColor,
   canRotateOpacity,
@@ -91,7 +91,8 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   private opacityGradientPlayer: AnimationPlayer;
   private opacityKnobPlayer: AnimationPlayer;
 
-  private colorRotation = 0;
+  private colorRotation = 180;
+  private opacityRotation = 270;
 
   @Input() public color: string;
   @Input() public colorType = 'hex';
@@ -170,7 +171,9 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   }
 
   get value() {
-    return '#' + this._value;
+    const lightnessPercent = Math.abs((this.opacityRotation - 360) * 100 / 180);
+    const hex = chroma(this.colorRotation, 1, lightnessPercent / 100, 'hsl').hex();
+    return hex;
   }
 
   @HostBinding('style.width.px') get width() {
@@ -208,7 +211,6 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   }
 
   writeValue(obj: any): void {
-    // console.log(obj);
     this.value = obj;
   }
 
@@ -323,7 +325,7 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
     this.recalculateOpacityKnobPosition();
     this.rect = this.el.nativeElement.getBoundingClientRect();
     const mapRadius = this.getSize;
-    renderColorMap(this.canvas.nativeElement, mapRadius);
+    renderColorMap(this.canvas.nativeElement, mapRadius, this.colorRotation);
     if (this.isCollapsed) {
       this.introAnimation();
       this.introAnimationOpacity();
@@ -429,9 +431,6 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
     const colorKnobNativeElement = this.colorRotator.nativeElement;
     this.renderer.setStyle(colorKnobNativeElement, 'transform', `rotate(${rotationAngle}deg)`);
     this.colorChange.emit(`#${hex}`);
-    if (!this.isExplicit) {
-      this.colorChange.emit(`#${hex}`);
-    }
   }
 
   /**
@@ -441,13 +440,12 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   public onRotateOpacity(opacityRotation) {
     const lightnessPercent = Math.abs((opacityRotation - 360) * 100 / 180);
     const hex = chroma(this.colorRotation, 1, lightnessPercent / 100, 'hsl').hex();
+    this.opacityRotation = opacityRotation;
     this.value = hex;
 
     const opacityKnobNativeElement = this.opacityRotator.nativeElement;
     this.renderer.setStyle(opacityKnobNativeElement, 'transform', `rotate(${opacityRotation}deg)`);
-    if (!this.isExplicit) {
-      this.colorChange.emit(`#${hex}`);
-    }
+    this.colorChange.emit(`#${hex}`);
   }
 
   public recalculateKnobPosition() {
@@ -475,7 +473,6 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
   }
 
   public confirmColor($event) {
-    // console.log('confirm color', $event);
     if (!this.isCollapsible) {
       this.selected.emit($event.color);
       this.lifecycle.emit(RCPLifecycleEvents.selected);
@@ -570,7 +567,6 @@ export class RadialColorPickerComponent implements OnInit, AfterViewInit, OnChan
     if (this.gradientPlayer) {
       this.gradientPlayer.destroy();
     }
-    // console.log('color picker destroy');
   }
 }
 

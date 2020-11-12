@@ -6,7 +6,7 @@
  * @param coefficient Relation between inner white circle outer border and color circle outer border, controls the width of the color gradient path
  * @returns canvas The passed canvas for easier chaining
  */
-export const renderColorMap = (canvas: HTMLCanvasElement, diameter: number, currentColorDegree: number = 0, coefficient: number = 0.77, SEPARATION_BETWEEN_CIRCLES = 20): HTMLCanvasElement => {
+export const renderColorMap = (canvas: HTMLCanvasElement, diameter: number, currentColorDegree: number = 180, coefficient: number = 0.77, SEPARATION_BETWEEN_CIRCLES = 20): HTMLCanvasElement => {
   canvas.width = canvas.height = diameter;
   const radius = diameter / 2;
   const toRad = (2 * Math.PI) / 360;
@@ -27,8 +27,10 @@ export const renderColorMap = (canvas: HTMLCanvasElement, diameter: number, curr
     ctx.arc(radius, radius, radius, startAngle, endAngle, false);
     if (i >= 180) {
       const lightnessValue = Math.abs((i * 100 / 180) - 200);
+      // Opacity semicircle
       ctx.strokeStyle = `hsl(${currentColorDegree}, 100%, ${lightnessValue}%)`;
     } else {
+      // Color semicircle
       ctx.strokeStyle = 'hsl(' + i * 2 + ', 100%, 50%)';
     }
 
