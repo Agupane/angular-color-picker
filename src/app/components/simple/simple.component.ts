@@ -7,13 +7,15 @@ import { Component, OnInit } from '@angular/core';
 })
 export class SimpleComponent implements OnInit {
 
+  public selectedColor: string;
+
   constructor() { }
 
   ngOnInit() {
   }
 
   public selectColor(color) {
-    console.log('select color', color);
+    this.selectedColor = color;
   }
 
   public rtpHook($event) {
@@ -22,5 +24,6 @@ export class SimpleComponent implements OnInit {
 
   public colorChange($event) {
     console.log(`colorChange event: ${$event}`);
+    this.selectedColor = $event;
   }
 }
